@@ -253,6 +253,378 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-5.Ret2Text%E8%AF%A6%E8%A7%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/%5Bobject%20Object%5D">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Csc8's">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-5.Ret2Text%E8%AF%A6%E8%A7%A3/" itemprop="url">从0开始学Pwn-5.ROP-Ret2Text详解</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-06-21T16:53:11+08:00">
+                2022-6-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>在栈溢出漏洞下，最常用的攻击手法是构造ROP链，而其中最简单的，也是最基础的ROP攻击手法，即是ret2text，其利用的背景是无NX保护，且程序中存在对应的shellcode</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-5.Ret2Text%E8%AF%A6%E8%A7%A3/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/%5Bobject%20Object%5D">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Csc8's">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/" itemprop="url">从0开始学Pwn-4.printf漏洞概述及利用</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-06-21T16:53:11+08:00">
+                2022-6-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>尝试第一次攻击，此处利用的是格式化字符串漏洞，只是有一点初步的了解，在之后的文章会进行更加深入的学习</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-3.Canary%E5%AE%9E%E4%BE%8B%E5%8F%8AGdb%E8%B0%83%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/%5Bobject%20Object%5D">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Csc8's">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-3.Canary%E5%AE%9E%E4%BE%8B%E5%8F%8AGdb%E8%B0%83%E8%AF%95/" itemprop="url">从0开始学Pwn-3.Canary实例及Gdb调试</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-06-21T16:53:11+08:00">
+                2022-6-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>了解GDB和程序的保护机制，正所谓:”知己知彼百战不殆”。pwn的学习要求我们从更底层的视角去阅读和理解程序，而gdb的学习，就是使该过程更加的清晰；程序会通过各种各样的保护来防止攻击，而攻击者需要通过各种方式绕过，从而实现攻击，所以需要对保护机制进行学习</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-3.Canary%E5%AE%9E%E4%BE%8B%E5%8F%8AGdb%E8%B0%83%E8%AF%95/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-2.%E4%BF%9D%E6%8A%A4%E5%92%8C%E6%BA%A2%E5%87%BA/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -323,7 +695,7 @@
 
       
         
-          <p>对程序的保护进行简单的了解，不同的保护实现了什么保护，其具体的功能是什么，我们又该如何绕过</p>
+          <p>对程序的保护进行简单的了解，不同的保护实现了什么目的，其具体的功能是什么，我们又该如何绕过</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-2.%E4%BF%9D%E6%8A%A4%E5%92%8C%E6%BA%A2%E5%87%BA/#more" rel="contents">
@@ -447,7 +819,7 @@
 
       
         
-          <p>对基础知识进行简单的了解</p>
+          <p>对基础概念进行简单的了解,  例如：溢出，寄存器，栈帧等等</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-1.%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/#more" rel="contents">
@@ -662,7 +1034,7 @@
               
                 <a href="/archives/%20%7C%7C%20archive">
               
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">6</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

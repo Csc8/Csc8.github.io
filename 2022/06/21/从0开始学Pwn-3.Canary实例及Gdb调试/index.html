@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT" />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="了解GDB和程序的保护机制，正所谓:”知己知彼百战不殆”。pwn的学习要求我们从更底层的视角去阅读和理解程序，而gdb的学习，就是使该过程更加的清晰；程序会通过各种各样的保护来防止攻击，而攻击者需要通过各种方式绕过，从而实现攻击，所以需要对保护机制进行学习">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从0开始学Pwn-3.Canary实例及Gdb调试">
+<meta property="og:url" content="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-3.Canary%E5%AE%9E%E4%BE%8B%E5%8F%8AGdb%E8%B0%83%E8%AF%95/index.html">
+<meta property="og:site_name" content="Csc8&#39;s">
+<meta property="og:description" content="了解GDB和程序的保护机制，正所谓:”知己知彼百战不殆”。pwn的学习要求我们从更底层的视角去阅读和理解程序，而gdb的学习，就是使该过程更加的清晰；程序会通过各种各样的保护来防止攻击，而攻击者需要通过各种方式绕过，从而实现攻击，所以需要对保护机制进行学习">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/s9nRYBbDlQFJ8cT.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/iuzTkIcKZ2waPhy.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/buFZkaeSrR8DjT9.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/Sq32HZ6b5Rjp9FL.png">
+<meta property="article:published_time" content="2022-06-21T08:53:11.396Z">
+<meta property="article:modified_time" content="2022-06-21T09:03:48.081Z">
+<meta property="article:author" content="csc8">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://s2.loli.net/2022/06/21/s9nRYBbDlQFJ8cT.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":true,"scrollpercent":true,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2022/06/21/从0开始学Pwn-3.Canary实例及Gdb调试/"/>
+
+
+
+
+
+  <title>从0开始学Pwn-3.Canary实例及Gdb调试 | Csc8's</title>
+  
+
+
+
+
+
+
+
+
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/clicklove.js"></script>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Csc8's</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">苍松翠柏</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-3.Canary%E5%AE%9E%E4%BE%8B%E5%8F%8AGdb%E8%B0%83%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/%5Bobject%20Object%5D">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Csc8's">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">从0开始学Pwn-3.Canary实例及Gdb调试</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-06-21T16:53:11+08:00">
+                2022-6-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>了解GDB和程序的保护机制，正所谓:”知己知彼百战不殆”。pwn的学习要求我们从更底层的视角去阅读和理解程序，而gdb的学习，就是使该过程更加的清晰；程序会通过各种各样的保护来防止攻击，而攻击者需要通过各种方式绕过，从而实现攻击，所以需要对保护机制进行学习</p>
+<span id="more"></span>
+
+
+
+
+
+
+
+<h3 id="1-Canary保护"><a href="#1-Canary保护" class="headerlink" title="1.Canary保护"></a>1.Canary保护</h3><p><img src="https://s2.loli.net/2022/06/21/s9nRYBbDlQFJ8cT.png" alt="pwn9.PNG"></p>
+<h3 id="绕过canary保护"><a href="#绕过canary保护" class="headerlink" title="绕过canary保护"></a>绕过canary保护</h3><p>只要在没开启pie下，获取到对应的canary，在我们覆盖ebp&#x2F;RBP前，添加上canary的值，即可绕过</p>
+<h4 id="①覆盖截断字符获取canary"><a href="#①覆盖截断字符获取canary" class="headerlink" title="①覆盖截断字符获取canary"></a>①覆盖截断字符获取canary</h4><p>低字节为’\x00’, 目的为了截断类似read，write等函数，但是通过栈溢出覆盖该’\x00’字节，即可读出canary的值</p>
+<h4 id="②利用格式化字符串漏洞获取Canary"><a href="#②利用格式化字符串漏洞获取Canary" class="headerlink" title="②利用格式化字符串漏洞获取Canary"></a>②利用格式化字符串漏洞获取Canary</h4><p>格式化字符串漏洞可以泄露栈上内容，而canary存在于栈上，所以可以通过类似printf的输出函数，打印出canary</p>
+<p>这些手段较为少见，在前两者无法实现的情况下使用</p>
+<h4 id="③onebyone爆破"><a href="#③onebyone爆破" class="headerlink" title="③onebyone爆破"></a>③onebyone爆破</h4><h4 id="④SSP泄露"><a href="#④SSP泄露" class="headerlink" title="④SSP泄露"></a>④SSP泄露</h4><h4 id="⑤劫持-stack-chk-fail函数"><a href="#⑤劫持-stack-chk-fail函数" class="headerlink" title="⑤劫持__stack_chk_fail函数"></a>⑤劫持__stack_chk_fail函数</h4><p>参考链接: <a target="_blank" rel="noopener" href="https://blog.csdn.net/Morphy_Amo/article/details/122120696">Canary的各种绕过姿势</a></p>
+<h3 id="2-什么是堆栈内存对齐"><a href="#2-什么是堆栈内存对齐" class="headerlink" title="2.什么是堆栈内存对齐"></a>2.什么是堆栈内存对齐</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">and esp, 0xfffffff0</span><br></pre></td></tr></table></figure>
+
+<p>在主流编译器规定中，程序访问的地址必须向16字节对齐(16的倍数)，内存对齐以提高访问效率</p>
+<h3 id="3-实例："><a href="#3-实例：" class="headerlink" title="3.实例："></a>3.实例：</h3><p>3.c:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">char</span> *name = <span class="string">&quot;Roger&quot;</span>;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;My name is %s&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="无Canary保护编译"><a href="#无Canary保护编译" class="headerlink" title="无Canary保护编译"></a>无Canary保护编译</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">无canary保护的编译</span></span><br><span class="line">gcc -no-pie -fno-stack-protector -m32 -o 3 3.c</span><br></pre></td></tr></table></figure>
+
+<p><strong>提权+调试</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">chmod 777 3</span><br><span class="line">gdb 3</span><br><span class="line">disass main</span><br><span class="line">b *0x0804840b</span><br><span class="line">r</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看断点</span></span><br><span class="line">i b</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">删除断点</span></span><br><span class="line">d b</span><br></pre></td></tr></table></figure>
+
+<p><strong>程序分析：</strong></p>
+<p><img src="https://s2.loli.net/2022/06/21/iuzTkIcKZ2waPhy.png" alt="pwn10.PNG"></p>
+<p><strong>前三行汇编：</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">将[esp+0x4]中的数据赋给ecx</span></span><br><span class="line">lea ecx,[esp+0x4]</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">内存对齐</span></span><br><span class="line">and esp,0xfffffff0</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">入栈</span></span><br><span class="line">push Dword ptr [ecx-0x4]</span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="有canary保护"><a href="#有canary保护" class="headerlink" title="有canary保护"></a>有canary保护</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">第一种：为所有函数插入保护代码</span></span><br><span class="line">gcc -no-pie -fstack-protector-all -m32 -o 3 3.c</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">第二种只为局部变量中含char数组的函数插入保护代码</span></span><br><span class="line">gcc -no-pie -fstack-protector -m32 -o 3 3.c</span><br></pre></td></tr></table></figure>
+
+<p>实例开启的是全保护</p>
+<p><img src="https://s2.loli.net/2022/06/21/buFZkaeSrR8DjT9.png" alt="pwn11.PNG"></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">1-3:内存对齐</span></span><br><span class="line">lea    ecx,[esp+0x4]</span><br><span class="line">and    esp,0xfffffff0</span><br><span class="line">push   DWORD PTR [ecx-0x4]</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">4-7:申请栈顶指针，申请栈帧空间</span></span><br><span class="line">push   ebp</span><br><span class="line">mov    ebp,esp</span><br><span class="line">push   ecx</span><br><span class="line">sub    esp,0x14</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">8-10：赋予程序canary信息</span></span><br><span class="line">mov eax,gs:0x14</span><br><span class="line">mov Dword ptr [ebp-0xc],eax</span><br><span class="line">xor    eax,eax</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">11-16：<span class="built_in">printf</span>内容</span></span><br><span class="line">mov    DWORD PTR [ebp-0x10],0x8048540</span><br><span class="line">sub    esp,0xc</span><br><span class="line">push   0x8048546</span><br><span class="line">call   0x8048330 &lt;printf@plt&gt;</span><br><span class="line">add    esp,0x10</span><br><span class="line">mov    eax,0x0</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">17-18：校验canary</span></span><br><span class="line">mov edx,Dword ptr [ebp-0xc]</span><br><span class="line">xor edx,Dword ptr gs:0x14</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">判断</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">19：如果相同,je跳转到call后面执行<span class="comment">#21</span></span></span><br><span class="line">je 0x80484b4 &lt;main+73&gt;</span><br><span class="line">.</span><br><span class="line">0x080484b4 &lt;+73&gt;:	mov    ecx,DWORD PTR [ebp-0x4]</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">20：如果不同，执行call,报错</span></span><br><span class="line">call 0x8048340 &lt;__stack_chk_fail@plt&gt;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">22：栈帧空间释放</span></span><br><span class="line">lea    esp,[ecx-0x4]</span><br><span class="line">ret</span><br></pre></td></tr></table></figure>
+
+<p><strong>通过反汇编disass，一步步调试，理解汇编指令和寄存器的变化</strong></p>
+<p><img src="https://s2.loli.net/2022/06/21/Sq32HZ6b5Rjp9FL.png" alt="pwn12.PNG"></p>
+<h3 id="4-Gdb调试"><a href="#4-Gdb调试" class="headerlink" title="4.Gdb调试"></a>4.Gdb调试</h3><h4 id="0-视频推荐"><a href="#0-视频推荐" class="headerlink" title="0.视频推荐"></a>0.视频推荐</h4><p><strong>B站：你想有多pwn_第一章_第2课_gdb调试上_x2</strong></p>
+<h4 id="1-认识gdb调试器"><a href="#1-认识gdb调试器" class="headerlink" title="1.认识gdb调试器"></a>1.认识gdb调试器</h4><p><strong>基本功能:</strong></p>
+<p><strong>-运行</strong></p>
+<p><strong>-步入，步过，步出，步止</strong></p>
+<p><strong>-断点(设置，删除，显示)</strong></p>
+<p><strong>-查看内存，寄存器，各种参数</strong></p>
+<p><strong>-设置内存，寄存器，各种参数（加载文件）</strong></p>
+<p><strong>强大之处：</strong></p>
+<p><strong>-远程调试</strong></p>
+<p><strong>-其他辅助功能</strong></p>
+<h4 id="2-常见寄存器"><a href="#2-常见寄存器" class="headerlink" title="2.常见寄存器"></a>2.常见寄存器</h4><p>在学习中不用太纠结寄存器的名字</p>
+<p><strong>了解最常用的寄存器</strong></p>
+<p>RIP：存放当前指令的地址</p>
+<p>RSP：存放栈帧的栈顶地址</p>
+<p>RBP：存放栈帧的栈底地址</p>
+<p>RAX：通用寄存器，存放函数返回值</p>
+<p><strong>amd64寄存器结构</strong></p>
+<p>rax:8Bytes</p>
+<p>eax:4Bytes</p>
+<p>ax:2Bytes</p>
+<p>ah:1Bytes</p>
+<p>al:1Bytes</p>
+<h4 id="3-常见命令"><a href="#3-常见命令" class="headerlink" title="3.常见命令"></a>3.常见命令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">启动</span></span><br><span class="line">start</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">run</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看寄存器</span></span><br><span class="line">i r</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">反汇编</span></span><br><span class="line">disass main</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">断点</span></span><br><span class="line">b *地址   #设置断点</span><br><span class="line">i b       #查看断点</span><br><span class="line">d 标号     #删除断点</span><br><span class="line">disable d_标号  #使断点失效</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="4-认识汇编指令"><a href="#4-认识汇编指令" class="headerlink" title="4.认识汇编指令"></a>4.认识汇编指令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">类似赋值操作，ebp = esp</span></span><br><span class="line">mov ebp,esp</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">加减法</span></span><br><span class="line">add eax,ebx  #eax = eax+ebx</span><br><span class="line">sub ebp,0x18 #ebp = ebp-0x18</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">现代编译器中，lea一般用于简单计算计算(因为内存短)</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">如果不是[..],那就是取偏移地址</span></span><br><span class="line">lea edi,[ebp-0x18]</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">异或：ebx=0</span></span><br><span class="line">xor ebx,ebx </span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">push ip,再跳转到标号处</span></span><br><span class="line">call</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">也是减，但是不赋值，只做减,只判断是否等于0</span></span><br><span class="line">cmp ebp,0x18</span><br><span class="line">strcmp ebp,0x18</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">j系列,和标志位有关，是跳转指令</span></span><br><span class="line">jne</span><br><span class="line">je</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="5-gdb调试64位程序"><a href="#5-gdb调试64位程序" class="headerlink" title="5.gdb调试64位程序"></a>5.gdb调试64位程序</h3><p>可以使用Ida x64进行调试</p>
+<p><strong>目的只是利用栈溢出执行exploit函数</strong></p>
+<p>test.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line">coid <span class="title function_">exploit</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    system(<span class="string">&quot;/bin/sh&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">char</span> buf[<span class="number">20</span>];</span><br><span class="line">    gets(buf);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>exp.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line">p = process(<span class="string">&quot;./test&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">#附加调试</span></span><br><span class="line"><span class="built_in">print</span> <span class="string">&quot;pid&quot;</span> + <span class="built_in">str</span>(proc.pidof(p))</span><br><span class="line"></span><br><span class="line">offset = <span class="number">40</span></span><br><span class="line">payload = offset*<span class="string">&#x27;a&#x27;</span> + p64()</span><br><span class="line"></span><br><span class="line"><span class="comment">#暂停</span></span><br><span class="line">pause()</span><br><span class="line"></span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure>
+
+<p>开启两个终端，一个终端跑脚本，另一个终端在前者pause时进行gdb附加调试</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#exp中</span></span><br><span class="line"><span class="comment">#附加调试</span></span><br><span class="line"><span class="built_in">print</span> <span class="string">&quot;pid&quot;</span> + <span class="built_in">str</span>(proc.pidof(p))</span><br><span class="line"></span><br><span class="line"><span class="comment">#暂停</span></span><br><span class="line">pause()</span><br><span class="line"></span><br><span class="line"><span class="comment">#一个终端运行，另一个终端输入指令</span></span><br><span class="line">指令：</span><br><span class="line">ps -aux | grep main <span class="comment">#获取进程pid</span></span><br><span class="line"></span><br><span class="line">gdb --pid  <span class="number">27152</span></span><br></pre></td></tr></table></figure>
+
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-2.%E4%BF%9D%E6%8A%A4%E5%92%8C%E6%BA%A2%E5%87%BA/" rel="next" title="从0开始学Pwn-2.保护概述和溢出实例">
+                <i class="fa fa-chevron-left"></i> 从0开始学Pwn-2.保护概述和溢出实例
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/" rel="prev" title="从0开始学Pwn-4.printf漏洞概述及利用">
+                从0开始学Pwn-4.printf漏洞概述及利用 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/%5Bobject%20Object%5D"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Canary%E4%BF%9D%E6%8A%A4"><span class="nav-text">1.Canary保护</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%95%E8%BF%87canary%E4%BF%9D%E6%8A%A4"><span class="nav-text">绕过canary保护</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%91%A0%E8%A6%86%E7%9B%96%E6%88%AA%E6%96%AD%E5%AD%97%E7%AC%A6%E8%8E%B7%E5%8F%96canary"><span class="nav-text">①覆盖截断字符获取canary</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%91%A1%E5%88%A9%E7%94%A8%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%BC%8F%E6%B4%9E%E8%8E%B7%E5%8F%96Canary"><span class="nav-text">②利用格式化字符串漏洞获取Canary</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%91%A2onebyone%E7%88%86%E7%A0%B4"><span class="nav-text">③onebyone爆破</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%91%A3SSP%E6%B3%84%E9%9C%B2"><span class="nav-text">④SSP泄露</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%91%A4%E5%8A%AB%E6%8C%81-stack-chk-fail%E5%87%BD%E6%95%B0"><span class="nav-text">⑤劫持__stack_chk_fail函数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E4%BB%80%E4%B9%88%E6%98%AF%E5%A0%86%E6%A0%88%E5%86%85%E5%AD%98%E5%AF%B9%E9%BD%90"><span class="nav-text">2.什么是堆栈内存对齐</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%AE%9E%E4%BE%8B%EF%BC%9A"><span class="nav-text">3.实例：</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%97%A0Canary%E4%BF%9D%E6%8A%A4%E7%BC%96%E8%AF%91"><span class="nav-text">无Canary保护编译</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%89canary%E4%BF%9D%E6%8A%A4"><span class="nav-text">有canary保护</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-Gdb%E8%B0%83%E8%AF%95"><span class="nav-text">4.Gdb调试</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#0-%E8%A7%86%E9%A2%91%E6%8E%A8%E8%8D%90"><span class="nav-text">0.视频推荐</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E8%AE%A4%E8%AF%86gdb%E8%B0%83%E8%AF%95%E5%99%A8"><span class="nav-text">1.认识gdb调试器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E5%B8%B8%E8%A7%81%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-text">2.常见寄存器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-%E5%B8%B8%E8%A7%81%E5%91%BD%E4%BB%A4"><span class="nav-text">3.常见命令</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-%E8%AE%A4%E8%AF%86%E6%B1%87%E7%BC%96%E6%8C%87%E4%BB%A4"><span class="nav-text">4.认识汇编指令</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-gdb%E8%B0%83%E8%AF%9564%E4%BD%8D%E7%A8%8B%E5%BA%8F"><span class="nav-text">5.gdb调试64位程序</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span id="scrollpercent"><span>0</span>%</span>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">csc8</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+  <span class="post-meta-divider">|</span>
+  本站总访问量<span id="busuanzi_value_site_pv"></span>次
+  <span class="post-meta-divider">|</span>
+  本站访客数<span id="busuanzi_value_site_uv"></span>人次
+  <span class="post-meta-divider">|</span>
+  本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+</div>
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/clicklove.js"></script>
+</body>
+</html>

